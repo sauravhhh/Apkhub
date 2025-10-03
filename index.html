@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APKHub - Download Android Apps</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .app-card {
+            transition: all 0.3s ease;
+        }
+        .app-card:hover {
+            transform: translateY(-4px);
+        }
+        .download-progress {
+            transition: width 0.3s ease;
+        }
+        .category-chip {
+            transition: all 0.2s ease;
+        }
+        .category-chip:hover {
+            transform: scale(1.05);
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-mobile-alt text-blue-600 text-2xl mr-3"></i>
+                    <h1 class="text-xl font-bold text-gray-800">APKHub</h1>
+                </div>
+                <button id="menuToggle" class="md:hidden text-gray-600">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <nav class="hidden md:flex space-x-6">
+                    <a href="#" class="text-gray-600 hover:text-blue-600 transition">Home</a>
+                    <a href="#" class="text-gray-600 hover:text-blue-600 transition">Categories</a>
+                    <a href="#" class="text-gray-600 hover:text-blue-600 transition">Trending</a>
+                    <a href="#" class="text-gray-600 hover:text-blue-600 transition">Updates</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden">
+        <div class="bg-white w-64 h-full p-4">
+            <button id="closeMenu" class="text-gray-600 mb-6">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <nav class="flex flex-col space-y-4">
+                <a href="#" class="text-gray-600 hover:text-blue-600 transition">Home</a>
+                <a href="#" class="text-gray-600 hover:text-blue-600 transition">Categories</a>
+                <a href="#" class="text-gray-600 hover:text-blue-600 transition">Trending</a>
+                <a href="#" class="text-gray-600 hover:text-blue-600 transition">Updates</a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Search Section -->
+    <section class="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-8">
+        <div class="container mx-auto px-4">
+            <h2 class="text-2xl font-bold mb-4 text-center">Find Your Favorite Apps</h2>
+            <div class="max-w-2xl mx-auto">
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="searchInput"
+                        placeholder="Search for apps, games, tools..."
+                        class="w-full px-4 py-3 pl-12 rounded-lg text-gray-800 focus:outline-none focus:ring-4 focus:ring-blue-300"
+                    >
+                    <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <button 
+                        id="searchBtn"
+                        class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
+                    >
+                        Search
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Categories -->
+    <section class="py-6 bg-white border-b">
+        <div class="container mx-auto px-4">
+            <div class="flex overflow-x-auto space-x-3 pb-2" id="categoriesContainer">
+                <!-- Categories will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- Filter and Sort -->
+        <div class="flex flex-wrap items-center justify-between mb-6 gap-4">
+            <div class="flex items-center space-x-4">
+                <select id="sortSelect" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="popular">Most Popular</option>
+                    <option value="newest">Newest First</option>
+                    <option value="rating">Highest Rated</option>
+                    <option value="downloaded">Most Downloaded</option>
+                </select>
+                <select id="filterSelect" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="all">All Apps</option>
+                    <option value="free">Free Only</option>
+                    <option value="paid">Paid Only</option>
+                    <option value="ads">No Ads</option>
+                </select>
+            </div>
+            <div class="text-sm text-gray-600">
+                <span id="appCount">Loading...</span> apps found
+            </div>
+        </div>
+
+        <!-- Apps Grid -->
+        <div id="appsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- App cards will be loaded here -->
+        </div>
+
+        <!-- Load More Button -->
+        <div class="text-center mt-8">
+            <button 
+                id="loadMoreBtn"
+                class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition transform hover:scale-105"
+            >
+                Load More Apps
+            </button>
+        </div>
+    </main>
+
+    <!-- Download Modal -->
+    <div id="downloadModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-md w-full p-6">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-xl font-bold">Download App</h3>
+                <button id="closeModal" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modalContent">
+                <!-- Modal content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-full transition-transform duration-300 z-50">
+        <div class="flex items-center">
+            <i class="fas fa-check-circle mr-2"></i>
+            <span id="toastMessage">Download started!</span>
+        </div>
+    </div>
+
+    <script>
+        // Mock API data
+        const mockApps = [
+            {
+                id: 1,
+                name: "WhatsApp Messenger",
+                category: "Communication",
+                icon: "https://picsum.photos/seed/whatsapp/100/100.jpg",
+                rating: 4.5,
+                downloads: "5B+",
+                size: "45MB",
+                version: "2.23.24.18",
+                price: "Free",
+                description: "Simple, reliable messaging and calling."
+            },
+            {
+                id: 2,
+                name: "Instagram",
+                category: "Social",
+                icon: "https://picsum.photos/seed/instagram/100/100.jpg",
+                rating: 4.2,
+                downloads: "1B+",
+                size: "78MB",
+                version: "298.0.0.12.110",
+                price: "Free",
+                description: "Share your moments with friends."
+            },
+            {
+                id: 3,
+                name: "Spotify Music",
+                category: "Music",
+                icon: "https://picsum.photos/seed/spotify/100/100.jpg",
+                rating: 4.6,
+                downloads: "1B+",
+                size: "102MB",
+                version: "8.8.52.410",
+                price: "Free",
+                description: "Music for everyone."
+            },
+            {
+                id: 4,
+                name: "Netflix",
+                category: "Entertainment",
+                icon: "https://picsum.photos/seed/netflix/100/100.jpg",
+                rating: 4.4,
+                downloads: "1B+",
+                size: "45MB",
+                version: "8.112.0 build 8 112 100",
+                price: "Free",
+                description: "Watch TV shows and movies."
+            },
+            {
+                id: 5,
+                name: "Google Maps",
+                category: "Maps & Navigation",
+                icon: "https://picsum.photos/seed/maps/100/100.jpg",
+                rating: 4.3,
+                downloads: "10B+",
+                size: "156MB",
+                version: "11.123.0101",
+                price: "Free",
+                description: "Navigate your world faster and easier."
+            },
+            {
+                id: 6,
+                name: "TikTok",
+                category: "Social",
+                icon: "https://picsum.photos/seed/tiktok/100/100.jpg",
+                rating: 4.1,
+                downloads: "1B+",
+                size: "89MB",
+                version: "30.5.3",
+                price: "Free",
+                description: "Short-form mobile videos."
+            },
+            {
+                id: 7,
+                name: "YouTube",
+                category: "Video Players",
+                icon: "https://picsum.photos/seed/youtube/100/100.jpg",
+                rating: 4.5,
+                downloads: "10B+",
+                size: "134MB",
+                version: "18.45.43",
+                price: "Free",
+                description: "Watch, like, share videos."
+            },
+            {
+                id: 8,
+                name: "Gmail",
+                category: "Communication",
+                icon: "https://picsum.photos/seed/gmail/100/100.jpg",
+                rating: 4.2,
+                downloads: "10B+",
+                size: "98MB",
+                version: "2023.10.29.x",
+                price: "Free",
+                description: "Email by Google."
+            }
+        ];
+
+        const categories = [
+            "All", "Games", "Social", "Communication", "Music", 
+            "Entertainment", "Tools", "Productivity", "Education"
+        ];
+
+        let currentApps = [...mockApps];
+        let displayedApps = 8;
+        let currentCategory = "All";
+        let currentFilter = "all";
+        let currentSort = "popular";
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCategories();
+            loadApps();
+            setupEventListeners();
+        });
+
+        // Load categories
+        function loadCategories() {
+            const container = document.getElementById('categoriesContainer');
+            container.innerHTML = categories.map(cat => `
+                <button 
+                    class="category-chip px-4 py-2 rounded-full whitespace-nowrap ${
+                        cat === currentCategory 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }"
+                    onclick="selectCategory('${cat}')"
+                >
+                    ${cat}
+                </button>
+            `).join('');
+        }
+
+        // Select category
+        function selectCategory(category) {
+            currentCategory = category;
+            displayedApps = 8;
+            filterAndSortApps();
+            loadCategories();
+            loadApps();
+        }
+
+        // Filter and sort apps
+        function filterAndSortApps() {
+            let filtered = [...mockApps];
+
+            // Filter by category
+            if (currentCategory !== "All") {
+                filtered = filtered.filter(app => app.category === currentCategory);
+            }
+
+            // Filter by type
+            if (currentFilter === "free") {
+                filtered = filtered.filter(app => app.price === "Free");
+            } else if (currentFilter === "paid") {
+                filtered = filtered.filter(app => app.price !== "Free");
+            }
+
+            // Sort
+            switch (currentSort) {
+                case "newest":
+                    filtered.sort((a, b) => b.id - a.id);
+                    break;
+                case "rating":
+                    filtered.sort((a, b) => b.rating - a.rating);
+                    break;
+                case "downloaded":
+                    filtered.sort((a, b) => {
+                        const aNum = parseInt(a.downloads.replace(/\D/g, ''));
+                        const bNum = parseInt(b.downloads.replace(/\D/g, ''));
+                        return bNum - aNum;
+                    });
+                    break;
+                default: // popular
+                    filtered.sort((a, b) => b.downloads.localeCompare(a.downloads));
+            }
+
+            currentApps = filtered;
+        }
+
+        // Load apps
+        function loadApps() {
+            const grid = document.getElementById('appsGrid');
+            const appsToShow = currentApps.slice(0, displayedApps);
+            
+            // Show skeleton loader initially
+            grid.innerHTML = Array(4).fill(0).map(() => `
+                <div class="bg-white rounded-lg shadow-md p-4 skeleton h-64"></div>
+            `).join('');
+
+            // Simulate API delay
+            setTimeout(() => {
+                grid.innerHTML = appsToShow.map(app => createAppCard(app)).join('');
+                updateAppCount();
+                
+                // Hide load more button if all apps are displayed
+                const loadMoreBtn = document.getElementById('loadMoreBtn');
+                if (displayedApps >= currentApps.length) {
+                    loadMoreBtn.style.display = 'none';
+                } else {
+                    loadMoreBtn.style.display = 'block';
+                }
+            }, 500);
+        }
+
+        // Create app card
+        function createAppCard(app) {
+            return `
+                <div class="app-card bg-white rounded-lg shadow-md p-4 hover:shadow-xl cursor-pointer fade-in">
+                    <div class="flex items-start space-x-3 mb-3">
+                        <img src="${app.icon}" alt="${app.name}" class="w-16 h-16 rounded-lg object-cover">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-semibold text-gray-800 truncate">${app.name}</h3>
+                            <p class="text-sm text-gray-500">${app.category}</p>
+                            <div class="flex items-center mt-1">
+                                <div class="flex items-center text-yellow-500 text-sm">
+                                    <i class="fas fa-star"></i>
+                                    <span class="ml-1 text-gray-600">${app.rating}</span>
+                                </div>
+                                <span class="text-xs text-gray-400 ml-2">${app.downloads}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-3 line-clamp-2">${app.description}</p>
+                    <div class="flex items-center justify-between text-xs text-gray-500 mb-3">
+                        <span><i class="fas fa-download mr-1"></i>${app.size}</span>
+                        <span><i class="fas fa-tag mr-1"></i>${app.price}</span>
+                    </div>
+                    <button 
+                        onclick="openDownloadModal(${app.id})"
+                        class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition transform hover:scale-105"
+                    >
+                        <i class="fas fa-download mr-2"></i>Download APK
+                    </button>
+                </div>
+            `;
+        }
+
+        // Open download modal
+        function openDownloadModal(appId) {
+            const app = mockApps.find(a => a.id === appId);
+            const modal = document.getElementById('downloadModal');
+            const content = document.getElementById('modalContent');
+            
+            content.innerHTML = `
+                <div class="text-center mb-4">
+                    <img src="${app.icon}" alt="${app.name}" class="w-24 h-24 rounded-lg mx-auto mb-3">
+                    <h4 class="text-lg font-semibold">${app.name}</h4>
+                    <p class="text-gray-600">${app.category}</p>
+                </div>
+                <div class="space-y-3 mb-6">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Version:</span>
+                        <span class="font-medium">${app.version}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Size:</span>
+                        <span class="font-medium">${app.size}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Rating:</span>
+                        <span class="font-medium">${app.rating} <i class="fas fa-star text-yellow-500 text-sm"></i></span>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <div class="bg-gray-200 rounded-full h-2 mb-2">
+                        <div id="progressBar" class="download-progress bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <p id="downloadStatus" class="text-center text-sm text-gray-600">Ready to download</p>
+                </div>
+                <button 
+                    onclick="startDownload(${app.id})"
+                    class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition"
+                >
+                    <i class="fas fa-download mr-2"></i>Start Download
+                </button>
+            `;
+            
+            modal.classList.remove('hidden');
+        }
+
+        // Start download simulation
+        function startDownload(appId) {
+            const progressBar = document.getElementById('progressBar');
+            const status = document.getElementById('downloadStatus');
+            const button = event.target;
+            
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Downloading...';
+            
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    status.textContent = 'Download complete!';
+                    button.innerHTML = '<i class="fas fa-check mr-2"></i>Downloaded';
+                    button.classList.remove('bg-green-600');
+                    button.classList.add('bg-gray-400');
+                    showToast('Download completed successfully!');
+                    
+                    setTimeout(() => {
+                        document.getElementById('downloadModal').classList.add('hidden');
+                    }, 2000);
+                } else {
+                    status.textContent = `Downloading... ${Math.round(progress)}%`;
+                }
+                progressBar.style.width = `${progress}%`;
+            }, 200);
+        }
+
+        // Show toast notification
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            toast.classList.remove('translate-y-full');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-full');
+            }, 3000);
+        }
+
+       // Update app count
+        function updateAppCount() {
+            document.getElementById('appCount').textContent = currentApps.length;
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Mobile menu
+            document.getElementById('menuToggle').addEventListener('click', () => {
+                document.getElementById('mobileMenu').classList.remove('hidden');
+            });
+            
+            document.getElementById('closeMenu').addEventListener('click', () => {
+                document.getElementById('mobileMenu').classList.add('hidden');
+            });
+            
+            // Close modal
+            document.getElementById('closeModal').addEventListener('click', () => {
+                document.getElementById('downloadModal').classList.add('hidden');
+            });
+            
+            // Search
+            document.getElementById('searchBtn').addEventListener('click', performSearch);
+            document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') performSearch();
+            });
+            
+            // Filter and sort
+      document.getElementById('filterSelect').addEventListener('change', (e) => {
+                currentFilter = e.target.value;
+                displayedApps = 8;
+                filterAndSortApps();
+                loadApps();
+            });
+            
+            document.getElementById('sortSelect').addEventListener('change', (e) => {
+                currentSort = e.target.value;
+                displayedApps = 8;
+                filterAndSortApps();
+                loadApps();
+            });
+            
+            // Load more
+            document.getElementById('loadMoreBtn').addEventListener('click', () => {
+                displayedApps += 4;
+                loadApps();
+            });
+        }
+
+        // Perform search
+        function performSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            if (query) {
+                currentApps = mockApps.filter(app => 
+                    app.name.toLowerCase().includes(query) ||
+                    app.category.toLowerCase().includes(query) ||
+                    app.description.toLowerCase().includes(query)
+                );
+              displayedApps = 8;
+                loadApps();
+                showToast(`Found ${currentApps.length} apps for "${query}"`);
+            }
+        }
+    </script>
+</body>
+</html>
